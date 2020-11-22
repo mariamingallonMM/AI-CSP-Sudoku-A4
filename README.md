@@ -76,3 +76,7 @@ However, in some edition of the textbook, unassign() is placed at the same level
 BTS pseudocode with indented unassign function(source: official AIMA website)
 
 You can choose an appropriate indentation level depending on your preference.
+
+## References
+
+- []() by []() for .

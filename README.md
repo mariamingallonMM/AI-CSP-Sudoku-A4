@@ -21,6 +21,39 @@ When executed as above, replacing "<input_string>" with any valid string represe
 
 Since this board is solved, the string representation will contain no zeros. You may test your program extensively by using sudokus_finish.txt, which contains the solved versions of all of the same puzzles.
 
+## Execute
+
+There are two versions of the main 'driver.py' file:
+- one which runs in Python 3.6 on Vocareum **![py36/driver.py](py36/driver.py)**.
+- one which runs in Python 3.7 by just executing the file **![driver.py](driver.py)** on your IDE.
+
+The **first one** is to be executed using $ python3 driver.py <input_string> in Vocareum, where <input_string> represents the puzzle board as a string of numbers.
+**Note** that to run it in Vocareum, we first need to read the line from the 'sudokus_start.txt' and pass it to a local variable in bash ($line). The following is the code we use in Vocareum before executing driver.py:
+$ line=$(awk 'NR==1 {print; exit}' sudokus_start.txt)
+
+where NR == 1 is for the first line
+
+then we call the variable by:
+$ echo "$line"
+
+and finally execute the .py file by:
+$ python3 driver.py "$line"
+
+The **second one** can be simply run from your IDE if you are using Python 3.7. It will take each line of ![sudokus_start.txt](data/sudokus_start.txt) and pass it on as a starting Sudoku puzzle board to be solved by the program. If you prefer to run line by line just uncomment the line 'board = boards[0]' from 'main' per the excerpt below
+
+def main():
+
+    #take a string as input data from sudokus_start.txt file
+    #input_string = str(sys.argv[1]) 
+    input_string = 'sudokus_start.txt'
+    boards = get_boards(input_string)
+    for board in boards:
+    #board = boards[0]
+        AI_solver(board)
+    
+if __name__ == '__main__':
+    main()
+
 ## How
 
 ### AC-3 Algorithm (AC3)
@@ -30,7 +63,7 @@ First, implement the AC-3 algorithm. Test your code on the provided set of puzzl
 Now, implement backtracking using the minimum remaining value heuristic. The order of values to be attempted for each variable is up to you. When a variable is assigned, apply forward checking to reduce variables domains. Test your code on the provided set of puzzles in sudokus_start.txt. Can you solve all puzzles now?
 
 ## Important
-### 1. Precedence over BTS
+### Precedence over BTS
 
 To check how powerful BTS is compared to AC3, you must execute AC-3 algorithm before Backtracking Search algorithm. That is, your program looks like this:
 
@@ -40,36 +73,27 @@ if (solved(assignment))
 assignment = BTS(given_sudoku_board)
           return "<filled sudoku board>" + " BTS" 
 
-### 2. Test-Run Your Code
+### A few notes on writing the algorithm
 
-To avoid wasting submission attempts, please test-run your code on Vocareum, and make sure it successfully produces an output file with the correct format. You can do this by hitting the RUN button, which simply executes your program with a sample input string containing a valid starting Sudoku board. After you hit RUN, when your program terminates, you should locate the output file within your working directory. Make sure the board and the algorithm name is separated by a single white space.
+What it is really meant by "To check how powerful BTS is compared to AC3, you must execute AC-3 algorithm before Backtracking Search algorithm.", or at least my interpretation is as follows:
 
-### 3. Grading Submissions
+- Create a function/method (or a class) that executes AC3 as per Fig 6.3 in the AIMA book (including the function revise used inside the main AC3.
+- Create a function that executes BTS as per Fig 6.5 in the AIMA book, so there is a backtracking-search and a backtrack function; the latter is called in the former.
+- The backtrack function is actually where the 'search' for the solution happens.
+- If you implement 'backtrack' per fig 6.5 in AIMA book, the first thing is actually to check that the puzzle at that stage is not already 'solved'.
+- Then inside 'backtrack' call a function (e.g. 'get_unassigned') that gets you the values from the puzzle board which are 'unassigned'; it should give you the 'key' of the value (e.g. 'A1', 'A2', etc) and the domain of that value (e.g. [1,2,3,4]) which will depend on other values in the same row, column or 3x3 square. This is represented by "var < - SELECT-UNASSIGNED-VARIABLE(csp, assignment)" in the pseudo code of fig 6.5.
+- Then for each 'var' in the 'domain of var', as given by the 'get_unassigned' function, assign the value to a copy of the starting 'csp' (e.g. local_assignment dict) and set the value of the 'unassigned' dict as False for the 'key' just assigned. 
+- If the value 'var' is consistent with the assignment, then continue to call AC3 inside BTS (backtrack-search, backtrack). 
+- Next, test if it has been able to 'solve' the puzzle. If AC3 alone is capable of resolving it, then return the result at that point. In that case, the 'method' will be 'AC3.
+- If AC3 was not able to 'solve' the puzzle, then carry one with the puzzle in the state that AC3 has left it and call in 'backtrack' (recursively inside backtrack). Before doing that, check that the value is still consistent. 
+- Note that you need to update the dict 'unassigned' with the latest puzzle achieved by AC3 before calling 'backtrack'. I was not doing that and I was passing on the starting 'unassigned' dict which did not align with the 'local_assignment' dict for the puzzle at that time. It cost me a few days to figure it out and I felt a bit hopeless for a while so if I can make someone avoid that error that would make very happy ;)
+- Next, we test the resulting puzzle from calling 'backtrack'; if the result from 'backtrack' did not return a valid result (not empty), then we call 'forward_checking' as an additional inference to reduce the domain of the unassigned variables when we step out of the loop 'for each value in ORDER-DOMAIN-VALUES'. Again we apply 'forward_checking' on the latest version of the 'local_ssignment' and 'unassigned' dicts.  
+- If the assignment is not consistent, ensure those values are reverted back to their original values and 'unassigned' status so that when we call 'get_unassigned' again we can try with a different domain. 
+- Finally, when running 'get_unassigned' it is essential to order the (key, vars) results considering the length of the array/list 'vars' so that the 'keys' with the smallest domain (smallest length of the possible values) get assigned first. This will implement the 'minimum-remaining-values' (MRV) heuristic as explained in section 6.3.1. of the AIMA book. 
 
-We will test your final program on 20 test cases. You can assume all test cases can be solved at least by BTS. Some of test cases might be solved by AC3 alone. Each input test case will be rated 5 points for a successfully solved board, and zero for any other resultant output. In sum, your submission will be assessed out of a total of 100 points. The test cases are no different in nature than the hundreds of test cases already provided in your starter code folder, for which the solutions are also available. If you can solve all of those, your program will most likely get full credit.
+In Backtracking Search pseudocode, why unassign() is not at the same indentation level as assign()? Should it be at the same level?
 
-### 4. Time Limit
-
-By now, we expect that you have a good sense of appropriate data structures and object representations. Naive brute-force approaches to solving Sudoku puzzles may take minutes, or even hours, to [possibly never] terminate. However, a correctly implemented backtracking approach as specified above should take well under a minute per puzzle. The grader will provide some breathing room, but programs with much longer running times will be killed.
-
-## FAQ
-
-Q. My code return different answers between my local computer and Vocareum! What's the cause?
-
-A. Please check in whether there is a Python version difference between Vocareum and your computer. As of July 2017, we use Python 3.4 on Vocareum for our grading environment. If you use Python 3.6 or newer locally, you might need to keep in mind the Dictionary ordering difference introduced in Python 3.6. One student reported sorting the resulted dictionary resolved the difference.
-
-Q. What does it mean to solve a sudoku instance by AC-3 alone?
-
-A. We consider a sudoku instance is solved if each of unassigned variables has only one domain value after AC-3.
-
-Q. My AC-3 has more than 1,000 constraints. It seems too much ... is this a correct approach?
-
-A. Yes, it is a correct approach. Having thousands of constraints is usual in CSP solvers. If we express Sudoku's constraints in a concise way such as "each row/column/box must consist of all of the nine integers 1 through 9", it seems sudoku's constraints can be expressed in just this single constraint. However, AC-3 only recognizes constraints in the form of arcs (binary relations), so we have to decompose this constraint into numerous binary constraints.
-
-Q. In Backtracking Search pseudocode, why unassign() is not at the same indentation level as assign()? Should it be at the same level?
-
-A. The pseudocode in class slides is taken from AIMA (Artificial Intelligence: Modern Approach) textbook, and the textbook's unassign() function essentially means unassign_if_assigned(var, assignment). Since unassign_if_assigned() does no operation if var is not assigned, the pseudocode correctly works.
-
+The pseudocode in class slides is taken from AIMA (Artificial Intelligence: Modern Approach) textbook, and the textbook's unassign() function essentially means unassign_if_assigned(var, assignment). Since unassign_if_assigned() does no operation if var is not assigned, the pseudocode correctly works.
 However, in some edition of the textbook, unassign() is placed at the same level as assign() as below:
 
 ![BTS pseudocode with indented unassign function](images/bts-unassign-with-indent.jpg)
@@ -79,4 +103,5 @@ You can choose an appropriate indentation level depending on your preference.
 
 ## References
 
-- []() by []() for .
+- [Constraint-Satisfaction Problems in Python](https://manningbooks.medium.com/constraint-satisfaction-problems-in-python-a1b4ba8dd3bb) by [David Kopec](https://manningbooks.medium.com/?source=post_page-----a1b4ba8dd3bb--------------------------------).
+- [AIMA online](http://aima.cs.berkeley.edu/python/csp.html).

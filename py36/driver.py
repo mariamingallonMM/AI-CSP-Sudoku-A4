@@ -1,21 +1,25 @@
 """
 This code implements a Constraint Satisfaction Problem (CSP) algorithm to resolve Sudokus. 
-Written using Python 3.7.
+Written using Python 3.7 and adapted to run in Vocareum needs to run as by executing:
+$ python3 driver.py <input_string>
+e.g. python3 driver.py "000000000302540000050301070000000004409006005023054790000000050700810000080060009"
 
-When excuting it, it reads each of the strings passed on from <input_string> = "sudokus_start.txt", as a string and converts it to a numpy array (dtype = object) to pass it onto the method 'AI_solver' which will in turn call in the AC3 method first and then combined with Backtrack search and Forward Check if AC3 alone is not successful.
+<input_string> = a string from "sudokus_start.txt"
 
-Algorithm returns a file called 'output.txt', containing various lines of text, each representing the finished Sudoku board and the algorithm name used (AC3 or BTS) which solved the Sudoku board. Note this version will append each new solved puzzle to the 'outputs.txt' file instead of rewriting the file. Refer to the function write_txt() and in the code below change 'a' for 'w' for rewriting instead of appending. 
-    with open(filepath, 'a') as out:
-        out.write(var + '\n')
-    
+Algorithm returns a file called output.txt, containing a **single line*** of text representing the finished Sudoku board and the algorithm name used (AC3 or BTS) which solved the Sudoku board. It prints a single white space as a delimiter between the board and the algorithm name.
+
 Example of output.txt:
+167523849984176523325489671798315264642798135531642798476831952213957486859264317 BTS
 
-148697523372548961956321478567983214419276385823154796691432857735819642284765139 BTS
-435269781682571493197834562826195347374682915951743628519326874248957136763418259 BTS
-956138742237954816481672953594867321128593674763421598879246135312785469645319287 BTS
-794582136268931745315476982689715324432869571157243869821657493943128657576394218 BTS
-249186573735942186168375429512697348976834251483251967694723815327518694851469732 BTS
+Note that to run it in Vocareum, we first need to read the line from the 'sudokus_start.txt' and pass it to a local variable in bash ($line). The following is the code we use in Vocareum before executing driver.py:
+line=$(awk 'NR==1 {print; exit}' sudokus_start.txt)
 
+where NR == 1 is for the first line
+
+then we call the variable by:
+echo "$line"
+
+e.g. python3 driver.py "$line"
 """
 
 # builtin modules
@@ -250,11 +254,11 @@ def backtrack_search(unassigned:dict, values:dict, arcs:dict):
             # earlier attempts of solving the board with AC3 only did not succeed
             use_ac3 = AC3(local_assignment, arcs)
             unassigned = update_unassigned(local_assignment)
-            view_board(local_assignment)
+            #view_board(local_assignment)
             board_string = values_to_board(local_assignment)
             if solved(board_string):
                 final_board = board_string
-                method = 'BTS'
+                method = 'AC3'
                 return (method, final_board)
             # if we're still consistent, we recurse (continue)
             if (is_consistent(local_assignment, arcs, key, var)):
@@ -389,9 +393,9 @@ def values_to_board(values:dict):
 
 def write_txt(filename_outputs:str = 'output.txt', final_str:str = None):
     # write the outputs csv file
-    filepath = os.path.join(os.getcwd(),'data', filename_outputs)
+    filepath = os.path.join(os.getcwd(), filename_outputs)
     var = final_str
-    with open(filepath, 'a') as out:
+    with open(filepath, 'w') as out:
         out.write(var + '\n')
     return print("New Outputs file saved to: <<", filename_outputs, ">>", sep='', end='\n')
 
@@ -404,7 +408,7 @@ def AI_solver(board):
     """
     values, arcs = setup_board(board)
     print("Start Board", end="\n")
-    view_board(values)
+    #view_board(values)
     print("First try with AC3 alone...", end="\n")
     use_ac3 = AC3(values, arcs) 
     board_string = values_to_board(values)
@@ -413,7 +417,7 @@ def AI_solver(board):
         final_str = ' '.join([str(board_string), method])
         write_txt('output.txt', final_str)
         print("This one was solved with AC3 alone!", end="\n")
-        view_board(values)
+        #view_board(values)
         return print(final_str)
     else:
         print("AC3 alone did not work so we try with backtrack and forward checking", end="\n")
@@ -435,12 +439,13 @@ def usage():
 def main():
 
     #take a string as input data from sudokus_start.txt file
-    #input_string = str(sys.argv[1]) 
-    input_string = 'sudokus_start.txt'
-    boards = get_boards(input_string)
-    for board in boards:
-    #board = boards[0]
+    input_string = str(sys.argv[1]) 
+    board = np.array([input_string], dtype = object)
+    if board:
         AI_solver(board)
+    else:
+        print("Enter valid command arguments !")
+    
     
 if __name__ == '__main__':
     main()
